@@ -1,4 +1,4 @@
-from dash import Dash, html, dcc
+from dash import Dash, html, dcc, Input, Output
 import plotly.express as px
 import pandas as pd
 
@@ -10,71 +10,48 @@ df = pd.read_csv('data/formatted_output.csv')
 df['date'] = pd.to_datetime(df['date'])
 df = df.sort_values(by="date")
 
-# 3. Visualization
-fig = px.line(
-    df, 
-    x="date", 
-    y="sales", 
-    title="Pink Morsel Sales Analysis",
-    labels={"date": "Transaction Date", "sales": "Total Sales (USD)"},
-    template="plotly_white"
-)
+# 3. App Layout
+app.layout = html.Div(style={'backgroundColor': '#F8F9FB', 'padding': '40px', 'fontFamily': 'sans-serif'}, children=[
+    html.H1("Pink Morsel Sales Visualiser", style={'textAlign': 'center', 'color': '#1A252F'}),
 
-# Marker for the price increase
-fig.add_vline(x='2021-01-15', line_dash="dash", line_color="#FF4136") 
-
-fig.add_annotation(
-    x='2021-01-15', 
-    y=df['sales'].max(),
-    text="Price Increase", 
-    showarrow=False, 
-    yshift=10
-)
-
-# 4. App Layout (Styled according to dash.plotly.com/layout)
-# We use a dictionary for common colors to keep the style consistent
-colors = {
-    'background': '#F9F9F9',
-    'text': '#2C3E50',
-    'header': '#1A252F'
-}
-
-app.layout = html.Div(
-    style={'backgroundColor': colors['background'], 'padding': '40px', 'fontFamily': 'sans-serif'},
-    children=[
-        
-        # Header - Titles the visualiser
-        html.H1(
-            children='Pink Morsel Visualiser',
-            style={
-                'textAlign': 'center',
-                'color': colors['header'],
-                'fontWeight': 'bold'
-            }
+    # The Radio Button Component (from dash.plotly.com/layout)
+    html.Div(style={'textAlign': 'center', 'padding': '20px'}, children=[
+        dcc.RadioItems(
+            id='region-picker',
+            options=[
+                {'label': 'North', 'value': 'north'},
+                {'label': 'East', 'value': 'east'},
+                {'label': 'South', 'value': 'south'},
+                {'label': 'West', 'value': 'west'},
+                {'label': 'All', 'value': 'all'}
+            ],
+            value='all',
+            inline=True
         ),
+    ]),
 
-        # Subtext / Context
-        html.Div(
-            children='Analyzing the impact of the price increase on 15th January, 2021.',
-            style={
-                'textAlign': 'center',
-                'color': colors['text'],
-                'marginBottom': '40px'
-            }
-        ),
+    dcc.Graph(id='sales-graph')
+])
 
-        # The Graph Component
-        html.Div(
-            style={'backgroundColor': 'white', 'padding': '20px', 'borderRadius': '10px', 'boxShadow': '0px 4px 6px rgba(0,0,0,0.1)'},
-            children=[
-                dcc.Graph(
-                    id='sales-line-chart',
-                    figure=fig
-                )
-            ]
-        )
-    ]
+# 4. Callback
+@app.callback(
+    Output('sales-graph', 'figure'),
+    Input('region-picker', 'value')
 )
+def update_graph(selected_region):
+    # Filter data
+    if selected_region == 'all':
+        filtered_df = df
+    else:
+        filtered_df = df[df['region'] == selected_region]
+
+    # Create figure
+    fig = px.line(filtered_df, x="date", y="sales", template="plotly_white")
+    
+    # Add marker with Adobe Color inspired Coral (#E74C3C)
+    fig.add_vline(x='2021-01-15', line_dash="dash", line_color="#E74C3C")
+    
+    return fig
 
 # 5. Run the App
 if __name__ == '__main__':
